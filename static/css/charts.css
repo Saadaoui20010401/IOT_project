@@ -1,0 +1,53 @@
+/* CSS for charts and tables */
+
+.chart-container {
+    position: relative;
+    height: 400px;
+    margin-bottom: 30px;
+}
+
+.period-selector {
+    margin-bottom: 20px;
+}
+
+.data-table-container {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.kpi-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+    height: 100%;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+}
+
+.kpi-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .chart-container {
+        height: 300px;
+    }
+    
+    .kpi-value {
+        font-size: 2rem;
+    }
+}
+
+/* Alert badges */
+.badge-high-temp {
+    background-color: #dc3545;
+}
+
+.badge-normal-temp {
+    background-color: #28a745;
+}

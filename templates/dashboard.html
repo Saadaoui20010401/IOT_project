@@ -1,0 +1,389 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard Temps Réel</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ✅ Meta CSRF (utile si cookie csrftoken absent) -->
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root{
+      --hot-1:#8B0000;
+      --hot-2:#FF0000;
+
+      /* ✅ VIVID AZURE demandé */
+      --cold-1:#0089c7;
+      --cold-2:#00B3FF;
+
+      --bg:#f8f9fa;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:rgba(0,0,0,0.08);
+      --shadow:0 8px 24px rgba(0,0,0,0.12);
+    }
+
+    body{
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      transition: background-color .35s ease, color .35s ease;
+      overflow-x: hidden;
+    }
+
+    /* ----- petits effets doux (sans casser) ----- */
+    .card-custom{
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .card-custom:hover{
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+    }
+
+    .icon-box{
+      font-size: 3rem;
+      margin-bottom: 10px;
+      opacity: .95;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,0.12));
+    }
+
+    /* ====== MODES ALERTE (HOT / COLD) ====== */
+    body.alarm-hot,
+    body.alarm-mode{
+      animation: bg-pulse-hot 1s infinite alternate;
+    }
+    @keyframes bg-pulse-hot{
+      from { background-color: var(--hot-1); }
+      to   { background-color: var(--hot-2); }
+    }
+
+    body.alarm-cold{
+      animation: bg-pulse-cold 1s infinite alternate;
+    }
+    @keyframes bg-pulse-cold{
+      from { background-color: var(--cold-1); }
+      to   { background-color: var(--cold-2); }
+    }
+
+    /* Overlay */
+    body.alarm-hot::before,
+    body.alarm-cold::before,
+    body.alarm-mode::before{
+      content:"";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events:none;
+      opacity: .85;
+      animation: overlayFlash .9s infinite alternate;
+    }
+
+    body.alarm-hot::before,
+    body.alarm-mode::before{
+      background:
+        repeating-linear-gradient(135deg,
+          rgba(255,255,255,0.10) 0px,
+          rgba(255,255,255,0.10) 12px,
+          rgba(0,0,0,0.08) 12px,
+          rgba(0,0,0,0.08) 24px
+        ),
+        radial-gradient(circle at 20% 20%, rgba(255,0,0,0.55), transparent 55%),
+        radial-gradient(circle at 80% 60%, rgba(255,140,0,0.30), transparent 60%);
+    }
+
+    body.alarm-cold::before{
+      background:
+        repeating-linear-gradient(135deg,
+          rgba(255,255,255,0.12) 0px,
+          rgba(255,255,255,0.12) 12px,
+          rgba(0,0,0,0.07) 12px,
+          rgba(0,0,0,0.07) 24px
+        ),
+        radial-gradient(circle at 25% 25%, rgba(0,179,255,0.60), transparent 55%),
+        radial-gradient(circle at 80% 60%, rgba(0,120,255,0.25), transparent 60%);
+    }
+
+    @keyframes overlayFlash{
+      from { filter: brightness(.95) saturate(1.15); opacity: .70; }
+      to   { filter: brightness(1.20) saturate(1.60); opacity: .92; }
+    }
+
+    .navbar, .container { position: relative; z-index: 2; }
+
+    body.alarm-hot .navbar,
+    body.alarm-mode .navbar{
+      background-color: #000 !important;
+      border-bottom: 3px solid var(--hot-2);
+    }
+    body.alarm-cold .navbar{
+      background-color: #000 !important;
+      border-bottom: 3px solid var(--cold-2);
+    }
+
+    body.alarm-hot #page-title,
+    body.alarm-hot #last-update,
+    body.alarm-cold #page-title,
+    body.alarm-cold #last-update,
+    body.alarm-mode #page-title,
+    body.alarm-mode #last-update{
+      color: #fff !important;
+    }
+
+    body.alarm-hot .card-custom,
+    body.alarm-mode .card-custom{
+      border: 4px solid rgba(255,0,0,.85);
+      box-shadow: 0 0 35px rgba(255,0,0,.55);
+      animation: cardPulse .8s infinite alternate;
+    }
+    body.alarm-cold .card-custom{
+      border: 4px solid rgba(0,179,255,.90);
+      box-shadow: 0 0 35px rgba(0,179,255,.55);
+      animation: cardPulse .8s infinite alternate;
+    }
+    @keyframes cardPulse{
+      from { transform: translateY(0px); }
+      to   { transform: translateY(-2px); }
+    }
+
+    #danger-message{ display:none; }
+    body.alarm-hot #danger-message,
+    body.alarm-cold #danger-message,
+    body.alarm-mode #danger-message{
+      display:block;
+      font-weight: 900;
+      font-size: 1.9rem;
+      color:#fff;
+      padding: 10px 14px;
+      text-align:center;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+      animation: text-pop .55s infinite;
+      letter-spacing: .5px;
+    }
+    body.alarm-hot #danger-message,
+    body.alarm-mode #danger-message{ background: rgba(185,0,0,0.95); }
+    body.alarm-cold #danger-message{ background: rgba(0,179,255,0.95); }
+
+    @keyframes text-pop{
+      0%,100%{ transform: scale(1); }
+      50%{ transform: scale(1.02); }
+    }
+
+    #instruction-box{ display:none; }
+    body.alarm-hot #instruction-box,
+    body.alarm-cold #instruction-box,
+    body.alarm-mode #instruction-box{
+      display:block;
+      font-weight: 800;
+      font-size: 1.15rem;
+      text-align:center;
+      padding: 14px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      border: 2px solid rgba(0,0,0,.25);
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(6px);
+    }
+
+    .flash-update{
+      animation: flash .35s ease;
+    }
+    @keyframes flash{
+      from { filter: brightness(1.25); transform: scale(1.02); }
+      to   { filter: brightness(1); transform: scale(1); }
+    }
+
+    #btn-validate-trigger{ display:none; }
+
+    .operator-section{
+      background-color:#f8f9fa;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      transition: all .35s ease;
+    }
+    .hidden-section{ display:none; }
+
+    .export-btns a{ min-width: 180px; }
+  </style>
+</head>
+
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="{% url 'home' %}">🔥 IoT Monitor</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Accueil</a></li>
+        <li class="nav-item"><a class="nav-link active" href="{% url 'dashboard' %}">Dashboard</a></li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Graphiques</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{% url 'my_chart_temp' %}">Température</a></li>
+            <li><a class="dropdown-item" href="{% url 'my_chart_hum' %}">Humidité</a></li>
+          </ul>
+        </li>
+
+        <li class="nav-item">
+          <form method="post" action="{% url 'logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit"
+                    class="nav-link text-warning fw-bold btn btn-link p-0"
+                    style="text-decoration:none;">
+              <i class="fa-solid fa-right-from-bracket"></i> Déconnexion
+            </button>
+          </form>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div id="danger-message">
+    <i class="fas fa-radiation-alt"></i> ALERTE EN COURS
+  </div>
+
+  <div id="instruction-box">
+    <i class="fas fa-bullhorn"></i> <span id="instruction-text">--</span>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="text-dark" id="page-title">Tableau de Bord</h1>
+    <span class="badge bg-secondary" id="last-update">Connexion...</span>
+  </div>
+
+  <div class="export-btns d-flex gap-2 flex-wrap mb-4">
+    <a class="btn btn-outline-dark" href="{% url 'download_csv' %}">
+      <i class="fa-solid fa-file-csv"></i> Export CSV (Données)
+    </a>
+    <a class="btn btn-outline-dark" href="{% url 'download_json' %}">
+      <i class="fa-solid fa-file-code"></i> Export JSON (Données)
+    </a>
+    <a class="btn btn-outline-dark" href="{% url 'download_incident_csv' %}">
+      <i class="fa-solid fa-triangle-exclamation"></i> Export CSV (Incidents)
+    </a>
+
+    <a class="btn btn-outline-primary" href="{% url 'test_api' %}">
+      <i class="fas fa-vial"></i> Simulateur Capteur
+    </a>
+  </div>
+
+  <div class="row text-center">
+    <div class="col-md-6 mb-4">
+      <div class="card card-custom p-4">
+        <div class="icon-box text-danger"><i class="fas fa-thermometer-half"></i></div>
+        <h3 class="text-muted">Température</h3>
+        <h1 class="display-4 fw-bold"><span id="temp-val">--</span> °C</h1>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card card-custom p-4">
+        <div class="icon-box text-primary"><i class="fas fa-tint"></i></div>
+        <h3 class="text-muted">Humidité</h3>
+        <h1 class="display-4 fw-bold"><span id="hum-val">--</span> %</h1>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-2">
+    <div class="col-12">
+      <div class="card card-custom p-3 text-center">
+        <h4 class="text-muted mb-3">Statut de Sécurité</h4>
+
+        <div class="d-flex justify-content-center align-items-center gap-4 flex-wrap">
+          <div class="d-flex align-items-center gap-2">
+            <div id="status-icon" style="font-size: 2rem;">✅</div>
+            <div id="status-text" class="text-success fw-bold fs-3">Système Nominal</div>
+          </div>
+
+          <button id="btn-validate-trigger" type="button"
+                  class="btn btn-warning btn-lg fw-bold shadow-sm"
+                  data-bs-toggle="modal" data-bs-target="#validationModal">
+            <i class="fas fa-check-circle"></i> TRAITER L'INCIDENT
+          </button>
+        </div>
+
+        <div class="mt-2">
+          <small>Alertes consécutives : <span id="alert-counter" class="badge bg-secondary">0</span></small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="validationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title text-dark fw-bold">Rapport d'Intervention</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body text-start">
+        <p class="mb-3 text-muted">Veuillez cocher votre rôle et indiquer l'action effectuée.</p>
+
+        <div id="secOp1" class="operator-section" style="border-left: 5px solid #ffc107;">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="checkOp1">
+            <label class="form-check-label fw-bold" for="checkOp1">OPÉRATEUR 1 (Niveau 1)</label>
+          </div>
+          <input type="text" class="form-control" id="comOp1" placeholder="Action prise par Opérateur 1">
+        </div>
+
+        <div id="secOp2" class="operator-section hidden-section" style="border-left: 5px solid #fd7e14;">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="checkOp2">
+            <label class="form-check-label fw-bold" for="checkOp2">OPÉRATEUR 2 (Escalade - Niveau 2)</label>
+          </div>
+          <input type="text" class="form-control" id="comOp2" placeholder="Action prise par Opérateur 2">
+        </div>
+
+        <div id="secOp3" class="operator-section hidden-section" style="border-left: 5px solid #dc3545;">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="checkOp3">
+            <label class="form-check-label fw-bold" for="checkOp3">OPÉRATEUR 3 (Crise - Niveau 3)</label>
+          </div>
+          <input type="text" class="form-control" id="comOp3" placeholder="Action prise par Opérateur 3">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+
+        <!-- ✅ corrigé : ton JS enregistre seulement, ne ferme pas l'incident -->
+        <button type="button" class="btn btn-success fw-bold" id="btn-submit-resolution">
+          ENREGISTRER L'ACTION
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/dashboard.js' %}?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Historique Humidité</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+
+    <style>
+        body { background-color: #f8f9fa; }
+        .chart-container {
+            background: white; padding: 20px; border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            position: relative; height: 60vh; width: 100%;
+        }
+        .filter-box {
+            background: white; padding: 15px; border-radius: 10px;
+            margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+          <a class="navbar-brand" href="{% url 'home' %}">🔥 IoT Monitor</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Accueil</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Graphiques</a>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="{% url 'my_chart_temp' %}">Température</a></li>
+                  <li><a class="dropdown-item" href="{% url 'my_chart_hum' %}">Humidité</a></li>
+                </ul>
+              </li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'incident_archive' %}">Incidents</a></li>
+              <li class="nav-item"><a class="nav-link" href="{% url 'data_table' %}">Données Brutes</a></li>
+            </ul>
+          </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="text-primary fw-bold">Historique Humidité</h2>
+
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary active" onclick="updateChart('jour', this)">24H</button>
+                <button class="btn btn-outline-primary" onclick="updateChart('semaine', this)">7 Jours</button>
+                <button class="btn btn-outline-primary" onclick="updateChart('mois', this)">1 Mois</button>
+            </div>
+        </div>
+
+        <div class="filter-box d-flex gap-3 align-items-end flex-wrap">
+            <div>
+                <label class="form-label small text-muted">Date de début</label>
+                <input type="datetime-local" id="startDate" class="form-control">
+            </div>
+            <div>
+                <label class="form-label small text-muted">Date de fin</label>
+                <input type="datetime-local" id="endDate" class="form-control">
+            </div>
+            <button class="btn btn-primary" onclick="applyCustomDate()">
+                <i class="fas fa-filter"></i> Filtrer
+            </button>
+            <button class="btn btn-secondary" onclick="resetZoom()">
+                🔍 Reset Zoom
+            </button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="humChart"></canvas>
+        </div>
+        <p class="text-center text-muted small mt-2">
+            💡 Astuce : Utilisez la molette de la souris pour <b>zoomer</b> et glissez pour vous <b>déplacer</b>.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let myChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData('jour');
+        });
+
+        function updateChart(period, btn) {
+            document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+            if(btn) btn.classList.add('active');
+
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+
+            fetchData(period);
+        }
+
+        function applyCustomDate() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+
+            if (!start || !end) {
+                alert("Veuillez sélectionner une date de début et de fin.");
+                return;
+            }
+
+            document.querySelectorAll('.btn-group .btn').forEach(b => b.classList.remove('active'));
+
+            fetch(`/api/data/custom/?start=${start}&end=${end}`)
+                .then(res => res.json())
+                .then(data => renderChart(data.labels, data.hum_data));
+        }
+
+        function fetchData(period) {
+            fetch(`/api/data/${period}/`)
+                .then(res => res.json())
+                .then(data => renderChart(data.labels, data.hum_data));
+        }
+
+        function resetZoom() {
+            if (myChart) myChart.resetZoom();
+        }
+
+        function renderChart(labels, data) {
+            const ctx = document.getElementById('humChart').getContext('2d');
+            if (myChart) myChart.destroy();
+
+            // Dégradé BLEU
+            const gradient = ctx.createLinearGradient(0,0,0,400);
+            gradient.addColorStop(0, 'rgba(13, 110, 253, 0.5)');
+            gradient.addColorStop(1, 'rgba(13, 110, 253, 0.0)');
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Humidité (%)',
+                        data: data,
+                        borderColor: '#0d6efd', // Bleu Bootstrap Primary
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        zoom: {
+                            pan: { enabled: true, mode: 'x' },
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'x',
+                            }
+                        },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Temps' } },
+                        y: {
+                            title: { display: true, text: 'Humidité (%)' },
+                            beginAtZero: true,
+                            max: 100 // L'humidité ne dépasse pas 100%
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

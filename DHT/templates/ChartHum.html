@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Humidity Chart - DHT11 Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 30px;
+    }
+    
+    .period-selector {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Humidity Chart</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Humidity Over Time</h5>
+                <div class="period-selector">
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadChartData('jour')">Last 24h</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadChartData('semaine')">Last Week</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="loadChartData('mois')">Last Month</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="humChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Chart Information</h5>
+            </div>
+            <div class="card-body">
+                <p>This chart displays humidity readings over time. The blue line represents humidity percentage.</p>
+                <p>Use the buttons above to switch between different time ranges.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let humChart = null;
+
+    // Initialize chart when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadChartData('jour'); // Load last 24 hours by default
+    });
+
+    function loadChartData(period) {
+        fetch(`/api/chart_data/${period}/`)
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('humChart').getContext('2d');
+                
+                // Destroy existing chart if it exists
+                if (humChart) {
+                    humChart.destroy();
+                }
+                
+                // Create new chart
+                humChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Humidity (%)',
+                            data: data.hum_data,
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Humidity (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error loading chart data:', error);
+            });
+    }
+</script>
+{% endblock %}

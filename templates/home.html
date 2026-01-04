@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - DHT11 Monitoring{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">DHT11 Temperature & Humidity Monitor</h1>
+        <p class="lead">Real-time monitoring of temperature and humidity data from DHT11 sensor</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Latest Readings</h5>
+            </div>
+            <div class="card-body">
+                {% if latest_data %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Temperature (°C)</th>
+                                    <th>Humidity (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in latest_data %}
+                                <tr>
+                                    <td>{{ data.dt }}</td>
+                                    <td>{{ data.temp|default:"--" }}</td>
+                                    <td>{{ data.hum|default:"--" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>No data available yet. Send sensor data to the API endpoint.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                        <i class="fas fa-tachometer-alt me-2"></i>View Dashboard
+                    </a>
+
+                    <a href="{% url 'my_chart_temp' %}" class="btn btn-danger">
+                        <i class="fas fa-chart-line me-2"></i>Temperature Chart
+                    </a>
+
+                    <a href="{% url 'my_chart_hum' %}" class="btn btn-info text-white">
+                        <i class="fas fa-tint me-2"></i>Humidity Chart
+                    </a>
+
+                    <a href="{% url 'data_table' %}" class="btn btn-success">
+                        <i class="fas fa-table me-2"></i>Full Data Table
+                    </a>
+
+                    <a href="{% url 'download_csv' %}" class="btn btn-warning">
+                        <i class="fas fa-file-csv me-2"></i>Download CSV
+                    </a>
+
+                    <!-- ✅ BOUTON AJOUTÉ ICI : SOUS DOWNLOAD CSV -->
+                    <a href="{% url 'test_api' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-vial me-2"></i>Simulateur Capteur (Test API)
+                    </a>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
