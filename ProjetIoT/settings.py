@@ -171,13 +171,14 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "noureddinesaadaoui20010401@gmail.com"
+EMAIL_HOST_USER = "noureddinesaadaouiensao@gmail.com"
 
 # ⚠️ idéalement à mettre dans .env (mais je te le laisse comme tu l’as)
-EMAIL_HOST_PASSWORD = "qrhu wzaa alnp kwsr"
+EMAIL_HOST_PASSWORD = "qrhu x
+zaa blnp kwsr xvcx"
 
-TELEGRAM_BOT_TOKEN = "8213192070:AAFdzwHOWo9Jg0DcMFf9sLer1uC0Y2kcr14"
-TELEGRAM_CHAT_ID = "6942932296"
+TELEGRAM_BOT_TOKEN = "8213192070:AAFdzwHOWo9Jg0DcMFf9sLer1uC0Y2kcr1422222222227676"
+TELEGRAM_CHAT_ID = "694293y46432296"
 
 
 # =====================
